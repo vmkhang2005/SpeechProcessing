@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+
+# Dataset
+data/
+*.wav
+*.flac
+
+# Logs & outputs
+logs/
+checkpoints/
+runs/
+*.pt
+*.pth
