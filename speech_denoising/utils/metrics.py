@@ -10,6 +10,38 @@ import warnings
 # Suppress warnings from PESQ
 warnings.filterwarnings('ignore')
 
+# Check PESQ availability at module load time
+_PESQ_AVAILABLE = False
+_PESQ_WARNING_SHOWN = False
+
+try:
+    from pesq import pesq as _pesq_func
+    _PESQ_AVAILABLE = True
+except ImportError:
+    _pesq_func = None
+
+
+def is_pesq_available() -> bool:
+    """Check if PESQ is available for use."""
+    return _PESQ_AVAILABLE
+
+
+def _show_pesq_warning():
+    """Show PESQ unavailable warning once."""
+    global _PESQ_WARNING_SHOWN
+    if not _PESQ_WARNING_SHOWN:
+        warnings.warn(
+            "PESQ package is not installed. PESQ metrics will be unavailable.\n"
+            "To install PESQ:\n"
+            "  - Linux/macOS: pip install pesq\n"
+            "  - Windows: Requires Microsoft Visual C++ Build Tools first.\n"
+            "    Install from: https://visualstudio.microsoft.com/visual-cpp-build-tools/\n"
+            "    Then run: pip install pesq\n"
+            "The project will continue to work with other metrics (STOI, SI-SDR, SNR).",
+            UserWarning
+        )
+        _PESQ_WARNING_SHOWN = True
+
 
 def calculate_snr(clean: np.ndarray, enhanced: np.ndarray) -> float:
     """
@@ -35,7 +67,7 @@ def calculate_pesq(
     enhanced: np.ndarray,
     sample_rate: int = 16000,
     mode: str = 'wb'
-) -> float:
+) -> Optional[float]:
     """
     Calculate PESQ (Perceptual Evaluation of Speech Quality)
     
@@ -46,21 +78,23 @@ def calculate_pesq(
         mode: 'wb' for wideband, 'nb' for narrowband
     
     Returns:
-        PESQ score (-0.5 to 4.5)
+        PESQ score (-0.5 to 4.5), or None if PESQ is not available
     """
+    if not _PESQ_AVAILABLE:
+        _show_pesq_warning()
+        return None
+    
     try:
-        from pesq import pesq
-        
         # Ensure same length
         min_len = min(len(clean), len(enhanced))
         clean = clean[:min_len]
         enhanced = enhanced[:min_len]
         
-        score = pesq(sample_rate, clean, enhanced, mode)
+        score = _pesq_func(sample_rate, clean, enhanced, mode)
         return score
     except Exception as e:
         print(f"PESQ calculation failed: {e}")
-        return 0.0
+        return None
 
 
 def calculate_stoi(
@@ -142,7 +176,7 @@ def evaluate_batch(
         clean_batch: Batch of clean audio [batch, samples]
         enhanced_batch: Batch of enhanced audio [batch, samples]
         sample_rate: Sample rate
-        compute_pesq: Calculate PESQ
+        compute_pesq: Calculate PESQ (will be skipped if pesq package unavailable)
         compute_stoi: Calculate STOI
     
     Returns:
@@ -164,7 +198,12 @@ def evaluate_batch(
         'si_sdr': []
     }
     
-    if compute_pesq:
+    # Only compute PESQ if requested AND available
+    should_compute_pesq = compute_pesq and is_pesq_available()
+    if compute_pesq and not is_pesq_available():
+        _show_pesq_warning()
+    
+    if should_compute_pesq:
         metrics['pesq'] = []
     if compute_stoi:
         metrics['stoi'] = []
@@ -176,12 +215,14 @@ def evaluate_batch(
         metrics['snr'].append(calculate_snr(clean, enhanced))
         metrics['si_sdr'].append(calculate_si_sdr(clean, enhanced))
         
-        if compute_pesq:
-            metrics['pesq'].append(calculate_pesq(clean, enhanced, sample_rate))
+        if should_compute_pesq:
+            pesq_score = calculate_pesq(clean, enhanced, sample_rate)
+            if pesq_score is not None:
+                metrics['pesq'].append(pesq_score)
         if compute_stoi:
             metrics['stoi'].append(calculate_stoi(clean, enhanced, sample_rate))
     
-    # Average metrics
-    avg_metrics = {k: np.mean(v) for k, v in metrics.items()}
+    # Average metrics (only include non-empty lists)
+    avg_metrics = {k: np.mean(v) for k, v in metrics.items() if len(v) > 0}
     
     return avg_metrics

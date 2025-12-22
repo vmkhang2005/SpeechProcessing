@@ -27,7 +27,24 @@ cd speech_denoising
 pip install -r requirements.txt
 ```
 
-### 2. Download VoiceBank + DEMAND Dataset
+### 2. (Tùy chọn) Cài đặt PESQ metric
+
+PESQ là một metric đánh giá chất lượng giọng nói, nhưng yêu cầu C compiler để cài đặt.
+
+**Linux/macOS:**
+```bash
+pip install pesq
+```
+
+**Windows:**
+PESQ yêu cầu Microsoft Visual C++ Build Tools. Nếu gặp lỗi khi cài đặt:
+1. Tải và cài đặt [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+2. Trong Visual Studio Installer, chọn "Desktop development with C++"
+3. Sau đó chạy: `pip install pesq`
+
+> **Lưu ý**: Dự án vẫn hoạt động bình thường mà không cần PESQ. Các metrics khác (STOI, SI-SDR, SNR) sẽ vẫn được tính toán.
+
+### 3. Download VoiceBank + DEMAND Dataset
 
 Dataset có thể download từ: https://datashare.ed.ac.uk/handle/10283/2791
 

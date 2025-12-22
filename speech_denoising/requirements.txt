@@ -15,7 +15,11 @@ numpy>=1.24.0
 pandas>=2.0.0
 
 # Metrics
-pesq>=0.0.4
+# NOTE: pesq is optional because it requires C compilation.
+# On Windows, this requires Microsoft Visual C++ Build Tools.
+# If pesq fails to install, the project will still work but PESQ metrics will be unavailable.
+# Install separately with: pip install pesq
+# pesq>=0.0.4
 pystoi>=0.3.3
 
 # Visualization

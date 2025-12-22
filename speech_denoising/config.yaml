@@ -69,5 +69,8 @@ logging:
 eval:
   output_dir: "./outputs"
   # Calculate metrics
+  # Note: PESQ requires the 'pesq' package which needs C compilation.
+  # On Windows, this requires Microsoft Visual C++ Build Tools.
+  # If pesq is not installed, PESQ metrics will be skipped automatically.
   compute_pesq: true
   compute_stoi: true
